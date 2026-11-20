@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Việc cần làm</title>
+<meta name="theme-color" content="#FFF6EE">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="To-do">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FFF6EE; --card:#FFFFFF; --ink:#4A3B47; --muted:#9A8A96; --line:#F3E4EA;
+  --pink:#FF7EA8; --pink-soft:#FFE1EC;
+  --q1:#FF6F91; --q1s:#FFE0E8;   /* Làm ngay */
+  --q2:#3CC7A6; --q2s:#D8F6EE;   /* Lên lịch */
+  --q3:#FFB443; --q3s:#FFF0D6;   /* Làm nhanh */
+  --q4:#A98BFF; --q4s:#ECE5FF;   /* Để sau */
+  --shadow:0 6px 18px rgba(255,126,168,.14);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:'Nunito',system-ui,-apple-system,sans-serif}
+body{padding:env(safe-area-inset-top) 0 calc(84px + env(safe-area-inset-bottom));min-height:100vh}
+button,input,select,textarea{font-family:inherit;color:inherit}
+header{padding:18px 18px 6px}
+.hello{font-size:13px;color:var(--muted);font-weight:700}
+h1{margin:2px 0 0;font-size:26px;font-weight:900;letter-spacing:-.3px}
+h1 span{color:var(--pink)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:12px 0 4px}
+.stats::-webkit-scrollbar{display:none}
+.stat{background:var(--card);border-radius:14px;padding:8px 8px;box-shadow:var(--shadow);font-size:11px;font-weight:700;color:var(--muted);line-height:1.25}
+.stat b{display:block;font-size:18px;color:var(--ink)}
+.chips{display:flex;gap:8px;padding:8px 18px;overflow-x:auto;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;border:0;background:var(--card);padding:8px 14px;border-radius:999px;font-weight:800;font-size:13px;box-shadow:var(--shadow);cursor:pointer}
+.chip.on{background:var(--pink);color:#fff}
+main{padding:4px 14px}
+.sec-title{display:flex;align-items:center;gap:8px;font-weight:900;font-size:15px;margin:16px 4px 8px}
+.sec-title .n{font-size:12px;color:var(--muted);font-weight:800}
+.sec-title.overdue{color:var(--q1)}
+.task{display:flex;gap:10px;align-items:flex-start;background:var(--card);border-radius:18px;padding:12px;margin-bottom:8px;box-shadow:var(--shadow);border-left:6px solid var(--line);cursor:pointer}
+.task.q1{border-left-color:var(--q1)}.task.q2{border-left-color:var(--q2)}.task.q3{border-left-color:var(--q3)}.task.q4{border-left-color:var(--q4)}
+.check{flex:0 0 26px;height:26px;border-radius:50%;border:2.5px solid #E7CFDA;background:#fff;display:grid;place-items:center;cursor:pointer;margin-top:1px}
+.check.done{background:var(--q2);border-color:var(--q2)}
+.check.done::after{content:'';width:8px;height:13px;border:solid #fff;border-width:0 3px 3px 0;transform:rotate(45deg) translate(-1px,-1px)}
+.tbody{flex:1;min-width:0}
+.ttitle{font-weight:800;font-size:15px;line-height:1.3;word-wrap:break-word}
+.task.isdone .ttitle{text-decoration:line-through;color:var(--muted)}
+.meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.tag{font-size:11px;font-weight:800;padding:3px 8px;border-radius:999px;background:#F7F0F4;color:var(--muted)}
+.tag.q1{background:var(--q1s);color:#D9476C}.tag.q2{background:var(--q2s);color:#1E9478}
+.tag.q3{background:var(--q3s);color:#C97E0E}.tag.q4{background:var(--q4s);color:#7A5BE0}
+.tag.late{background:var(--q1);color:#fff}
+.tnote{font-size:12px;color:var(--muted);margin-top:4px;white-space:pre-wrap}
+.empty{text-align:center;color:var(--muted);padding:40px 20px;font-weight:700}
+.empty .big{font-size:42px}
+/* matrix */
+.matrix{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+.quad{border-radius:20px;padding:10px;min-height:150px}
+.quad h3{margin:0 0 2px;font-size:14px;font-weight:900}
+.quad .sub{font-size:11px;font-weight:700;opacity:.75;margin-bottom:8px}
+.quad.q1{background:var(--q1s)}.quad.q1 h3{color:#D9476C}
+.quad.q2{background:var(--q2s)}.quad.q2 h3{color:#1E9478}
+.quad.q3{background:var(--q3s)}.quad.q3 h3{color:#C97E0E}
+.quad.q4{background:var(--q4s)}.quad.q4 h3{color:#7A5BE0}
+.mini{background:#fff;border-radius:12px;padding:7px 9px;margin-bottom:6px;font-size:13px;font-weight:800;cursor:pointer;line-height:1.3}
+.mini .d{display:block;font-size:10px;color:var(--muted);font-weight:800;margin-top:2px}
+.axis{font-size:11px;color:var(--muted);font-weight:800;text-align:center;margin-top:6px}
+.tip{background:var(--card);border-radius:18px;padding:12px 14px;font-size:13px;line-height:1.5;box-shadow:var(--shadow);margin-top:12px}
+.tip b{color:var(--pink)}
+/* nav */
+nav{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.94);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);display:flex;justify-content:space-around;padding:8px 0 calc(8px + env(safe-area-inset-bottom));border-top:1px solid var(--line);z-index:5}
+nav button{border:0;background:none;font-size:11px;font-weight:800;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 10px;cursor:pointer}
+nav button .i{font-size:20px;filter:grayscale(1);opacity:.6}
+nav button.on{color:var(--pink)}
+nav button.on .i{filter:none;opacity:1}
+.fab{position:fixed;right:18px;bottom:calc(84px + env(safe-area-inset-bottom));width:58px;height:58px;border-radius:50%;border:0;background:linear-gradient(135deg,#FF8FB5,#FF6F91);color:#fff;font-size:32px;font-weight:700;box-shadow:0 10px 24px rgba(255,111,145,.45);z-index:6;cursor:pointer;line-height:1}
+/* sheet */
+.overlay{position:fixed;inset:0;background:rgba(74,59,71,.35);display:none;z-index:10}
+.overlay.show{display:block}
+.sheet{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-radius:26px 26px 0 0;padding:10px 18px calc(18px + env(safe-area-inset-bottom));max-height:92vh;overflow-y:auto;transform:translateY(105%);visibility:hidden;transition:transform .25s ease,visibility .25s;z-index:11}
+.sheet.show{transform:none;visibility:visible}
+.grab{width:42px;height:5px;border-radius:9px;background:#EBD6DF;margin:0 auto 10px}
+.sheet h2{margin:0 0 12px;font-size:19px;font-weight:900}
+label.l{display:block;font-size:12px;font-weight:800;color:var(--muted);margin:12px 2px 6px}
+.in{width:100%;border:2px solid var(--line);background:#fff;border-radius:14px;padding:11px 12px;font-size:16px;font-weight:700;outline:none}
+.in:focus{border-color:var(--pink)}
+textarea.in{min-height:64px;resize:vertical;font-weight:600}
+.row{display:flex;gap:8px}.row>*{flex:1;min-width:0}
+.toggles{display:flex;gap:8px}
+.tg{flex:1;border:2px solid var(--line);background:#fff;border-radius:14px;padding:10px;font-weight:800;font-size:14px;cursor:pointer;text-align:center}
+.tg.on.imp{border-color:var(--q2);background:var(--q2s);color:#1E9478}
+.tg.on.urg{border-color:var(--q1);background:var(--q1s);color:#D9476C}
+.qpreview{margin-top:8px;font-size:13px;font-weight:800;padding:8px 12px;border-radius:12px}
+.pills{display:flex;flex-wrap:wrap;gap:6px}
+.pill{border:2px solid var(--line);background:#fff;border-radius:999px;padding:7px 12px;font-weight:800;font-size:13px;cursor:pointer}
+.pill.on{border-color:var(--pink);background:var(--pink-soft);color:#D9476C}
+.btns{display:flex;gap:8px;margin-top:18px}
+.btn{flex:1;border:0;border-radius:16px;padding:14px;font-weight:900;font-size:15px;cursor:pointer}
+.btn.main{background:var(--pink);color:#fff}
+.btn.ghost{background:#fff;color:var(--ink);border:2px solid var(--line)}
+.btn.danger{background:#fff;color:var(--q1);border:2px solid var(--q1s)}
+.btn.cal{background:var(--q2s);color:#1E9478}
+.set-card{background:var(--card);border-radius:18px;padding:14px;box-shadow:var(--shadow);margin-bottom:12px}
+.set-card h3{margin:0 0 6px;font-size:15px;font-weight:900}
+.set-card p{margin:0 0 10px;font-size:13px;color:var(--muted);line-height:1.5}
+.grp{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-weight:800}
+.grp:last-child{border:0}
+.grp button{margin-left:auto;border:0;background:none;color:var(--muted);font-size:18px;cursor:pointer}
+.toast{position:fixed;left:50%;bottom:calc(150px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:999px;font-weight:800;font-size:13px;opacity:0;transition:opacity .2s;z-index:20;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hello" id="hello"></div>
+  <h1 id="htitle">Việc cần làm <span>✿</span></h1>
+  <div class="stats" id="stats"></div>
+</header>
+
+<div class="chips" id="groupChips"></div>
+
+<main id="view"></main>
+
+<button class="fab" id="fab" aria-label="Thêm việc">+</button>
+
+<nav>
+  <button data-tab="list" class="on"><span class="i">📝</span>Danh sách</button>
+  <button data-tab="matrix"><span class="i">🧭</span>Ma trận</button>
+  <button data-tab="done"><span class="i">✅</span>Đã xong</button>
+  <button data-tab="settings"><span class="i">⚙️</span>Cài đặt</button>
+</nav>
+
+<div class="overlay" id="overlay"></div>
+<div class="sheet" id="sheet">
+  <div class="grab"></div>
+  <h2 id="sheetTitle">Thêm việc mới</h2>
+  <input class="in" id="fTitle" placeholder="Cần làm gì nè?" autocomplete="off">
+  <label class="l">Mức ưu tiên (ma trận Eisenhower)</label>
+  <div class="toggles">
+    <button class="tg imp" id="fImp">⭐ Quan trọng</button>
+    <button class="tg urg" id="fUrg">🔥 Gấp</button>
+  </div>
+  <div class="qpreview" id="qPreview"></div>
+  <label class="l">Nhóm</label>
+  <div class="pills" id="fGroups"></div>
+  <div class="row">
+    <div><label class="l">Hạn chót</label><input class="in" type="date" id="fDue"></div>
+    <div><label class="l">Giờ (tuỳ chọn)</label><input class="in" type="time" id="fTime"></div>
+  </div>
+  <label class="l">Lặp lại</label>
+  <div class="pills" id="fRepeat"></div>
+  <label class="l">Ghi chú</label>
+  <textarea class="in" id="fNote" placeholder="Chi tiết thêm (không bắt buộc)"></textarea>
+  <div class="btns">
+    <button class="btn ghost" id="bCancel">Huỷ</button>
+    <button class="btn main" id="bSave">Lưu</button>
+  </div>
+  <div class="btns" id="editBtns">
+    <button class="btn cal" id="bCal">🔔 Thêm nhắc vào Lịch</button>
+    <button class="btn danger" id="bDel">Xoá</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<input type="file" id="importFile" accept="application/json,.json" class="hidden">
+
+<script>
+(function(){
+'use strict';
+var KEY='todo_v1';
+var QUAD={
+  q1:{name:'Làm ngay',sub:'Quan trọng · Gấp',emo:'🔥'},
+  q2:{name:'Lên lịch',sub:'Quan trọng · Không gấp',emo:'🌱'},
+  q3:{name:'Làm nhanh / nhờ',sub:'Không quan trọng · Gấp',emo:'⚡'},
+  q4:{name:'Để sau / bỏ',sub:'Không quan trọng · Không gấp',emo:'☁️'}
+};
+var QORDER={q1:0,q2:1,q3:2,q4:3};
+var REPEATS=[['none','Không'],['daily','Mỗi ngày'],['weekly','Mỗi tuần'],['monthly','Mỗi tháng']];
+var DEFAULT_GROUPS=['Công việc','Cá nhân','Học','Mua sắm','Nhà cửa'];
+
+function load(){
+  try{
+    var d=JSON.parse(localStorage.getItem(KEY));
+    if(d&&Array.isArray(d.tasks)) return d;
+  }catch(e){}
+  return {tasks:[],groups:DEFAULT_GROUPS.slice()};
+}
+var db=load();
+function save(){ try{localStorage.setItem(KEY,JSON.stringify(db));}catch(e){toast('Không lưu được dữ liệu');} }
+
+var state={tab:'list',group:'Tất cả',editing:null,form:null};
+
+/* ---------- date helpers ---------- */
+function pad(n){return (n<10?'0':'')+n;}
+function ymd(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+function parse(s){var p=s.split('-');return new Date(+p[0],+p[1]-1,+p[2]);}
+function today(){return ymd(new Date());}
+function addDays(s,n){var d=parse(s);d.setDate(d.getDate()+n);return ymd(d);}
+function addMonth(s){var d=parse(s),day=d.getDate();d.setDate(1);d.setMonth(d.getMonth()+1);
+  var last=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();d.setDate(Math.min(day,last));return ymd(d);}
+function nextDue(s,rep){return rep==='daily'?addDays(s,1):rep==='weekly'?addDays(s,7):rep==='monthly'?addMonth(s):s;}
+function diffDays(s){return Math.round((parse(s)-parse(today()))/86400000);}
+var WD=['CN','T2','T3','T4','T5','T6','T7'];
+function fmtDue(t){
+  if(!t.due) return '';
+  var n=diffDays(t.due), s;
+  if(n===0)s='Hôm nay';else if(n===1)s='Ngày mai';else if(n===-1)s='Hôm qua';
+  else if(n<0)s='Trễ '+(-n)+' ngày';
+  else if(n<7)s=WD[parse(t.due).getDay()]+' '+parse(t.due).getDate()+'/'+(parse(t.due).getMonth()+1);
+  else s=parse(t.due).getDate()+'/'+(parse(t.due).getMonth()+1);
+  return s+(t.time?' · '+t.time:'');
+}
+
+/* ---------- priority ---------- */
+// Gấp = tự bật gấp, HOẶC hạn chót trong vòng 1 ngày tới / đã trễ
+function isUrgent(t){ return !!t.urgent || (t.due && diffDays(t.due)<=1); }
+function quad(t){ var i=!!t.important,u=isUrgent(t); return i&&u?'q1':i?'q2':u?'q3':'q4'; }
+function sortTasks(a,b){
+  var q=QORDER[quad(a)]-QORDER[quad(b)]; if(q) return q;
+  var ad=a.due||'9999', bd=b.due||'9999'; if(ad!==bd) return ad<bd?-1:1;
+  var at=a.time||'99', bt=b.time||'99'; if(at!==bt) return at<bt?-1:1;
+  return a.created-b.created;
+}
+
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+function $(id){return document.getElementById(id);}
+
+function toast(msg){var t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(function(){t.classList.remove('show');},1800);}
+
+/* ---------- render ---------- */
+function filtered(done){
+  return db.tasks.filter(function(t){return !!t.done===done && (state.group==='Tất cả'||t.group===state.group);});
+}
+function taskHTML(t){
+  var q=quad(t), late=t.due&&!t.done&&diffDays(t.due)<0;
+  var tags='<span class="tag '+q+'">'+QUAD[q].emo+' '+QUAD[q].name+'</span>';
+  if(t.due) tags+='<span class="tag'+(late?' late':'')+'">📅 '+esc(fmtDue(t))+'</span>';
+  if(t.repeat&&t.repeat!=='none') tags+='<span class="tag">🔁 '+REPEATS.filter(function(r){return r[0]===t.repeat;})[0][1]+'</span>';
+  if(t.group) tags+='<span class="tag">'+esc(t.group)+'</span>';
+  return '<div class="task '+q+(t.done?' isdone':'')+'" data-id="'+t.id+'">'+
+    '<div class="check'+(t.done?' done':'')+'" data-check="'+t.id+'"></div>'+
+    '<div class="tbody"><div class="ttitle">'+esc(t.title)+'</div>'+
+    '<div class="meta">'+tags+'</div>'+
+    (t.note?'<div class="tnote">'+esc(t.note)+'</div>':'')+'</div></div>';
+}
+function section(title,list,cls){
+  if(!list.length) return '';
+  return '<div class="sec-title '+(cls||'')+'">'+title+' <span class="n">'+list.length+'</span></div>'+list.map(taskHTML).join('');
+}
+function renderList(){
+  var open=filtered(false).sort(sortTasks);
+  if(!open.length) return '<div class="empty"><div class="big">🌷</div>Chưa có việc nào.<br>Bấm nút + để thêm nha!</div>';
+  var over=[],tod=[],soon=[],later=[],nodue=[];
+  open.forEach(function(t){
+    if(!t.due) return nodue.push(t);
+    var n=diffDays(t.due);
+    if(n<0)over.push(t);else if(n===0)tod.push(t);else if(n<=7)soon.push(t);else later.push(t);
+  });
+  return section('⏰ Quá hạn',over,'overdue')+section('☀️ Hôm nay',tod)+section('🗓️ 7 ngày tới',soon)+section('🌙 Sau này',later)+section('📌 Không có hạn',nodue);
+}
+function renderMatrix(){
+  var open=filtered(false).sort(sortTasks);
+  var by={q1:[],q2:[],q3:[],q4:[]};
+  open.forEach(function(t){by[quad(t)].push(t);});
+  var h='<div class="matrix">';
+  ['q1','q2','q3','q4'].forEach(function(q){
+    h+='<div class="quad '+q+'"><h3>'+QUAD[q].emo+' '+QUAD[q].name+' ('+by[q].length+')</h3><div class="sub">'+QUAD[q].sub+'</div>';
+    h+=by[q].map(function(t){return '<div class="mini" data-id="'+t.id+'"><span>'+esc(t.title)+'</span>'+(t.due?'<span class="d">'+esc(fmtDue(t))+'</span>':'')+'</div>';}).join('')||'<div class="sub">Trống ✨</div>';
+    h+='</div>';
+  });
+  h+='</div>';
+  h+='<div class="tip"><b>Cách dùng ma trận:</b><br>🔥 <b>Làm ngay</b>: quan trọng và gấp, xử lý trước tiên.<br>🌱 <b>Lên lịch</b>: quan trọng nhưng chưa gấp, chọn ngày cụ thể để làm. Đây là ô nên dành nhiều thời gian nhất.<br>⚡ <b>Làm nhanh / nhờ</b>: gấp nhưng không quan trọng, làm gọn hoặc nhờ người khác.<br>☁️ <b>Để sau / bỏ</b>: xem lại, nếu không cần thì xoá luôn.<br><br>Việc có hạn chót <b>hôm nay, ngày mai hoặc đã trễ</b> sẽ tự động được tính là gấp.</div>';
+  return h;
+}
+function renderDone(){
+  var d=filtered(true).sort(function(a,b){return (b.doneAt||0)-(a.doneAt||0);});
+  if(!d.length) return '<div class="empty"><div class="big">🎀</div>Chưa hoàn thành việc nào.</div>';
+  return '<div class="btns" style="margin-top:6px"><button class="btn danger" id="bClearDone">Xoá hết việc đã xong</button></div>'+section('Đã xong',d);
+}
+function renderSettings(){
+  var g=db.groups.map(function(x,i){return '<div class="grp">'+esc(x)+'<button data-delgroup="'+i+'" aria-label="Xoá nhóm">✕</button></div>';}).join('');
+  return '<div class="set-card"><h3>📂 Nhóm việc</h3><div>'+g+'</div>'+
+    '<div class="row" style="margin-top:10px"><input class="in" id="newGroup" placeholder="Tên nhóm mới"><button class="btn main" id="bAddGroup" style="flex:0 0 90px">Thêm</button></div></div>'+
+    '<div class="set-card"><h3>💾 Sao lưu dữ liệu</h3><p>Dữ liệu chỉ nằm trên máy này. Thỉnh thoảng nên tải bản sao lưu về (Lưu vào Tệp) để không bị mất khi đổi máy hoặc xoá Safari.</p>'+
+    '<div class="btns" style="margin-top:0"><button class="btn cal" id="bExport">Tải bản sao lưu</button><button class="btn ghost" id="bImport">Khôi phục</button></div></div>'+
+    '<div class="set-card"><h3>🔔 Về nhắc nhở</h3><p>Mở một việc có hạn chót rồi bấm <b>"Thêm nhắc vào Lịch"</b>, iPhone sẽ hỏi thêm vào app Lịch. Lịch sẽ hiện thông báo đúng giờ, việc lặp lại cũng được lặp trong Lịch.</p></div>';
+}
+function renderStats(){
+  var open=db.tasks.filter(function(t){return !t.done;});
+  var tod=open.filter(function(t){return t.due&&diffDays(t.due)<=0;}).length;
+  var q1=open.filter(function(t){return quad(t)==='q1';}).length;
+  var doneToday=db.tasks.filter(function(t){return t.done&&t.doneAt&&ymd(new Date(t.doneAt))===today();}).length;
+  $('stats').innerHTML='<div class="stat"><b>'+open.length+'</b>đang chờ</div><div class="stat"><b>'+tod+'</b>tới hạn</div><div class="stat"><b>'+q1+'</b>🔥 làm ngay</div><div class="stat"><b>'+doneToday+'</b>đã xong</div>';
+}
+function renderChips(){
+  var all=['Tất cả'].concat(db.groups);
+  $('groupChips').innerHTML=all.map(function(g){return '<button class="chip'+(g===state.group?' on':'')+'" data-group="'+esc(g)+'">'+esc(g)+'</button>';}).join('');
+  $('groupChips').classList.toggle('hidden',state.tab==='settings');
+}
+function render(){
+  var h=new Date().getHours();
+  $('hello').textContent=(h<11?'Chào buổi sáng':h<14?'Chào buổi trưa':h<18?'Chào buổi chiều':'Chào buổi tối')+' · '+WD[new Date().getDay()]+' '+new Date().getDate()+'/'+(new Date().getMonth()+1);
+  renderStats();renderChips();
+  var v=state.tab==='list'?renderList():state.tab==='matrix'?renderMatrix():state.tab==='done'?renderDone():renderSettings();
+  $('view').innerHTML=v;
+  $('fab').classList.toggle('hidden',state.tab==='settings'||state.tab==='done');
+  document.querySelectorAll('nav button').forEach(function(b){b.classList.toggle('on',b.dataset.tab===state.tab);});
+}
+
+/* ---------- actions ---------- */
+function toggleDone(id){
+  var t=db.tasks.filter(function(x){return x.id===id;})[0]; if(!t) return;
+  if(t.done){ t.done=false; t.doneAt=null; save(); render(); return; }
+  if(t.repeat&&t.repeat!=='none'){
+    // lưu một bản "đã xong" và dời việc gốc sang lần kế tiếp
+    var copy=JSON.parse(JSON.stringify(t)); copy.id=uid(); copy.done=true; copy.doneAt=Date.now(); copy.repeat='none';
+    db.tasks.push(copy);
+    var base=t.due||today(), nx=nextDue(base,t.repeat);
+    while(nx<=today()) nx=nextDue(nx,t.repeat);
+    t.due=nx;
+    save(); render(); toast('Xong rồi! Lần tới: '+fmtDue(t));
+  }else{
+    t.done=true; t.doneAt=Date.now(); save(); render(); toast('Giỏi quá! 🎉');
+  }
+}
+
+/* ---------- sheet / form ---------- */
+function openSheet(task){
+  state.editing=task?task.id:null;
+  state.form=task?JSON.parse(JSON.stringify(task)):{title:'',important:false,urgent:false,group:(state.group!=='Tất cả'?state.group:''),due:'',time:'',repeat:'none',note:''};
+  var f=state.form;
+  $('sheetTitle').textContent=task?'Sửa việc':'Thêm việc mới';
+  $('fTitle').value=f.title; $('fDue').value=f.due||''; $('fTime').value=f.time||''; $('fNote').value=f.note||'';
+  $('editBtns').classList.toggle('hidden',!task);
+  drawForm();
+  $('overlay').classList.add('show'); $('sheet').classList.add('show');
+  if(!task) setTimeout(function(){$('fTitle').focus();},250);
+}
+function closeSheet(){ $('overlay').classList.remove('show'); $('sheet').classList.remove('show'); state.editing=null; }
+function drawForm(){
+  var f=state.form;
+  f.due=$('fDue').value;
+  $('fImp').classList.toggle('on',!!f.important);
+  $('fUrg').classList.toggle('on',!!f.urgent);
+  var q=quad(f), auto=!f.urgent&&f.due&&diffDays(f.due)<=1;
+  var p=$('qPreview');
+  p.className='qpreview tag '+q; p.style.display='block';
+  p.innerHTML=QUAD[q].emo+' Việc này thuộc ô: <b>'+QUAD[q].name+'</b>'+(auto?' (tự tính gấp vì hạn chót sát)':'');
+  $('fGroups').innerHTML=['']
+    .concat(db.groups).map(function(g){return '<button class="pill'+((f.group||'')===g?' on':'')+'" data-fgroup="'+esc(g)+'">'+(g?esc(g):'Không nhóm')+'</button>';}).join('');
+  $('fRepeat').innerHTML=REPEATS.map(function(r){return '<button class="pill'+(f.repeat===r[0]?' on':'')+'" data-frep="'+r[0]+'">'+r[1]+'</button>';}).join('');
+}
+function saveForm(){
+  var f=state.form;
+  f.title=$('fTitle').value.trim(); f.due=$('fDue').value; f.time=$('fTime').value; f.note=$('fNote').value.trim();
+  if(!f.title){ toast('Nhập tên việc đã nha'); $('fTitle').focus(); return; }
+  if(f.repeat!=='none'&&!f.due) f.due=today();
+  if(state.editing){
+    var i=db.tasks.findIndex(function(t){return t.id===state.editing;});
+    if(i>-1) db.tasks[i]=f;
+  }else{
+    f.id=uid(); f.created=Date.now(); f.done=false; db.tasks.push(f);
+  }
+  save(); closeSheet(); render(); toast('Đã lưu ✿');
+}
+
+/* ---------- calendar reminder (.ics) ---------- */
+function icsEsc(s){return String(s||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');}
+function addToCalendar(){
+  var f=state.form;
+  f.title=$('fTitle').value.trim(); f.due=$('fDue').value; f.time=$('fTime').value; f.note=$('fNote').value.trim();
+  if(!f.due){ toast('Chọn hạn chót trước đã nha'); return; }
+  var time=f.time||'09:00';
+  var dt=f.due.replace(/-/g,'')+'T'+time.replace(':','')+'00';
+  var now=new Date(), stamp=now.toISOString().replace(/[-:]/g,'').replace(/\.\d+/,'');
+  var rr={daily:'DAILY',weekly:'WEEKLY',monthly:'MONTHLY'}[f.repeat];
+  var lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//todo-pastel//VI','CALSCALE:GREGORIAN','BEGIN:VEVENT',
+    'UID:'+(f.id||uid())+'@todo-pastel','DTSTAMP:'+stamp,'DTSTART:'+dt,'DURATION:PT15M',
+    'SUMMARY:'+icsEsc('✿ '+f.title),'DESCRIPTION:'+icsEsc(f.note||'Nhắc từ app Việc cần làm')];
+  if(rr) lines.push('RRULE:FREQ='+rr);
+  lines.push('BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+icsEsc(f.title),'TRIGGER:PT0M','END:VALARM','END:VEVENT','END:VCALENDAR');
+  var blob=new Blob([lines.join('\r\n')],{type:'text/calendar;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a'); a.href=url; a.download='nhac-viec.ics';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){URL.revokeObjectURL(url);},5000);
+  if(!f.time) toast('Chưa chọn giờ nên nhắc lúc 9:00');
+}
+
+/* ---------- backup ---------- */
+function exportData(){
+  var blob=new Blob([JSON.stringify(db,null,1)],{type:'application/json'});
+  var url=URL.createObjectURL(blob), a=document.createElement('a');
+  a.href=url; a.download='todo-backup-'+today()+'.json'; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){URL.revokeObjectURL(url);},5000);
+}
+function importData(file){
+  var r=new FileReader();
+  r.onload=function(){
+    try{ var d=JSON.parse(r.result); if(!d||!Array.isArray(d.tasks)) throw 0;
+      if(!confirm('Khôi phục sẽ thay toàn bộ dữ liệu hiện tại. Tiếp tục?')) return;
+      db={tasks:d.tasks,groups:Array.isArray(d.groups)?d.groups:DEFAULT_GROUPS.slice()}; save(); render(); toast('Đã khôi phục');
+    }catch(e){ toast('File không hợp lệ'); }
+  };
+  r.readAsText(file);
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click',function(e){
+  var el=e.target;
+  var c=el.closest('[data-check]'); if(c){ e.stopPropagation(); toggleDone(c.dataset.check); return; }
+  var tab=el.closest('nav button'); if(tab){ state.tab=tab.dataset.tab; render(); window.scrollTo(0,0); return; }
+  var chip=el.closest('[data-group]'); if(chip){ state.group=chip.dataset.group; render(); return; }
+  var fg=el.closest('[data-fgroup]'); if(fg){ state.form.group=fg.dataset.fgroup; drawForm(); return; }
+  var fr=el.closest('[data-frep]'); if(fr){ state.form.repeat=fr.dataset.frep; drawForm(); return; }
+  var dg=el.closest('[data-delgroup]'); if(dg){ var name=db.groups[+dg.dataset.delgroup];
+    if(confirm('Xoá nhóm "'+name+'"? Các việc trong nhóm vẫn giữ nguyên.')){ db.groups.splice(+dg.dataset.delgroup,1); if(state.group===name) state.group='Tất cả'; save(); render(); } return; }
+  var tk=el.closest('[data-id]'); if(tk){ var t=db.tasks.filter(function(x){return x.id===tk.dataset.id;})[0]; if(t) openSheet(t); return; }
+  switch(el.id){
+    case 'fab': openSheet(null); break;
+    case 'overlay': case 'bCancel': closeSheet(); break;
+    case 'bSave': saveForm(); break;
+    case 'fImp': state.form.important=!state.form.important; drawForm(); break;
+    case 'fUrg': state.form.urgent=!state.form.urgent; drawForm(); break;
+    case 'bCal': addToCalendar(); break;
+    case 'bDel': if(confirm('Xoá việc này?')){ db.tasks=db.tasks.filter(function(t){return t.id!==state.editing;}); save(); closeSheet(); render(); toast('Đã xoá'); } break;
+    case 'bClearDone': if(confirm('Xoá hết các việc đã xong?')){ db.tasks=db.tasks.filter(function(t){return !t.done;}); save(); render(); } break;
+    case 'bAddGroup': var n=$('newGroup').value.trim(); if(n&&db.groups.indexOf(n)<0){ db.groups.push(n); save(); render(); toast('Đã thêm nhóm'); } break;
+    case 'bExport': exportData(); break;
+    case 'bImport': $('importFile').click(); break;
+  }
+});
+$('fDue').addEventListener('change',drawForm);
+$('fTitle').addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); saveForm(); } });
+$('importFile').addEventListener('change',function(){ if(this.files[0]) importData(this.files[0]); this.value=''; });
+document.addEventListener('visibilitychange',function(){ if(!document.hidden) render(); });
+
+render();
+if('serviceWorker' in navigator && location.protocol==='https:'){ navigator.serviceWorker.register('sw.js').catch(function(){}); }
+})();
+</script>
+</body>
+</html>
