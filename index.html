@@ -26,7 +26,7 @@
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--ink);font-family:'Nunito',system-ui,-apple-system,sans-serif}
-body{padding:env(safe-area-inset-top) 0 calc(84px + env(safe-area-inset-bottom));min-height:100vh}
+body{padding:env(safe-area-inset-top) 0 calc(84px + env(safe-area-inset-bottom));min-height:100vh;max-width:640px;margin:0 auto}
 button,input,select,textarea{font-family:inherit;color:inherit}
 header{padding:18px 18px 6px}
 .hello{font-size:13px;color:var(--muted);font-weight:700}
@@ -35,7 +35,12 @@ h1 span{color:var(--pink)}
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:12px 0 4px}
 .stats::-webkit-scrollbar{display:none}
 .stat{background:var(--card);border-radius:14px;padding:8px 8px;box-shadow:var(--shadow);font-size:11px;font-weight:700;color:var(--muted);line-height:1.25}
+.stat{border:2px solid transparent;cursor:pointer;text-align:left}
 .stat b{display:block;font-size:18px;color:var(--ink)}
+.stat.on{border-color:var(--pink);background:var(--pink-soft);color:#D9476C}
+.stat.on b{color:#D9476C}
+.filterbar{margin:4px 4px 0;font-size:12px;font-weight:800;color:var(--muted)}
+.filterbar button{border:0;background:none;color:var(--pink);font-weight:900;font-size:12px;cursor:pointer;padding:0 4px}
 .chips{display:flex;gap:8px;padding:8px 18px;overflow-x:auto;scrollbar-width:none}
 .chips::-webkit-scrollbar{display:none}
 .chip{flex:0 0 auto;border:0;background:var(--card);padding:8px 14px;border-radius:999px;font-weight:800;font-size:13px;box-shadow:var(--shadow);cursor:pointer}
@@ -80,7 +85,7 @@ nav button{border:0;background:none;font-size:11px;font-weight:800;color:var(--m
 nav button .i{font-size:20px;filter:grayscale(1);opacity:.6}
 nav button.on{color:var(--pink)}
 nav button.on .i{filter:none;opacity:1}
-.fab{position:fixed;right:18px;bottom:calc(84px + env(safe-area-inset-bottom));width:58px;height:58px;border-radius:50%;border:0;background:linear-gradient(135deg,#FF8FB5,#FF6F91);color:#fff;font-size:32px;font-weight:700;box-shadow:0 10px 24px rgba(255,111,145,.45);z-index:6;cursor:pointer;line-height:1}
+.fab{position:fixed;right:max(18px,calc(50vw - 302px));bottom:calc(84px + env(safe-area-inset-bottom));width:58px;height:58px;border-radius:50%;border:0;background:linear-gradient(135deg,#FF8FB5,#FF6F91);color:#fff;font-size:32px;font-weight:700;box-shadow:0 10px 24px rgba(255,111,145,.45);z-index:6;cursor:pointer;line-height:1}
 /* sheet */
 .overlay{position:fixed;inset:0;background:rgba(74,59,71,.35);display:none;z-index:10}
 .overlay.show{display:block}
@@ -153,11 +158,15 @@ textarea.in{min-height:64px;resize:vertical;font-weight:600}
   <label class="l">Nhóm</label>
   <div class="pills" id="fGroups"></div>
   <div class="row">
-    <div><label class="l">Hạn chót</label><input class="in" type="date" id="fDue"></div>
+    <div><label class="l" id="dueLabel">Hạn chót</label><input class="in" type="date" id="fDue"></div>
     <div><label class="l">Giờ (tuỳ chọn)</label><input class="in" type="time" id="fTime"></div>
   </div>
   <label class="l">Lặp lại</label>
   <div class="pills" id="fRepeat"></div>
+  <div id="untilBox" class="hidden">
+    <label class="l">Lặp đến ngày (để trống = lặp mãi)</label>
+    <input class="in" type="date" id="fUntil">
+  </div>
   <label class="l">Ghi chú</label>
   <textarea class="in" id="fNote" placeholder="Chi tiết thêm (không bắt buộc)"></textarea>
   <div class="btns">
@@ -197,7 +206,8 @@ function load(){
 var db=load();
 function save(){ try{localStorage.setItem(KEY,JSON.stringify(db));}catch(e){toast('Không lưu được dữ liệu');} }
 
-var state={tab:'list',group:'Tất cả',editing:null,form:null};
+var state={tab:'list',group:'Tất cả',stat:'open',editing:null,form:null};
+var STATS={open:'Đang chờ',due:'Tới hạn',q1:'Làm ngay',done:'Đã xong'};
 
 /* ---------- date helpers ---------- */
 function pad(n){return (n<10?'0':'')+n;}
@@ -238,6 +248,14 @@ function $(id){return document.getElementById(id);}
 function toast(msg){var t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(function(){t.classList.remove('show');},1800);}
 
 /* ---------- render ---------- */
+function inGroup(t){return state.group==='Tất cả'||t.group===state.group;}
+function statMatch(t,k){
+  if(k==='done') return !!t.done;
+  if(t.done) return false;
+  if(k==='due') return !!t.due&&diffDays(t.due)<=0;
+  if(k==='q1') return quad(t)==='q1';
+  return true;
+}
 function filtered(done){
   return db.tasks.filter(function(t){return !!t.done===done && (state.group==='Tất cả'||t.group===state.group);});
 }
@@ -245,7 +263,7 @@ function taskHTML(t){
   var q=quad(t), late=t.due&&!t.done&&diffDays(t.due)<0;
   var tags='<span class="tag '+q+'">'+QUAD[q].emo+' '+QUAD[q].name+'</span>';
   if(t.due) tags+='<span class="tag'+(late?' late':'')+'">📅 '+esc(fmtDue(t))+'</span>';
-  if(t.repeat&&t.repeat!=='none') tags+='<span class="tag">🔁 '+REPEATS.filter(function(r){return r[0]===t.repeat;})[0][1]+'</span>';
+  if(t.repeat&&t.repeat!=='none') tags+='<span class="tag">🔁 '+REPEATS.filter(function(r){return r[0]===t.repeat;})[0][1]+(t.until?' đến '+parse(t.until).getDate()+'/'+(parse(t.until).getMonth()+1):'')+'</span>';
   if(t.group) tags+='<span class="tag">'+esc(t.group)+'</span>';
   return '<div class="task '+q+(t.done?' isdone':'')+'" data-id="'+t.id+'">'+
     '<div class="check'+(t.done?' done':'')+'" data-check="'+t.id+'"></div>'+
@@ -257,19 +275,29 @@ function section(title,list,cls){
   if(!list.length) return '';
   return '<div class="sec-title '+(cls||'')+'">'+title+' <span class="n">'+list.length+'</span></div>'+list.map(taskHTML).join('');
 }
+function filterBar(){
+  if(state.stat==='open'&&state.group==='Tất cả') return '';
+  var parts=[]; if(state.stat!=='open') parts.push(STATS[state.stat]); if(state.group!=='Tất cả') parts.push(state.group);
+  return '<div class="filterbar">Đang lọc: '+esc(parts.join(' + '))+' <button id="bClearFilter">✕ Bỏ lọc</button></div>';
+}
 function renderList(){
-  var open=filtered(false).sort(sortTasks);
-  if(!open.length) return '<div class="empty"><div class="big">🌷</div>Chưa có việc nào.<br>Bấm nút + để thêm nha!</div>';
+  if(state.stat==='done'){
+    var d=db.tasks.filter(function(t){return t.done&&inGroup(t);}).sort(function(a,b){return (b.doneAt||0)-(a.doneAt||0);});
+    return filterBar()+(d.length?section('✅ Đã xong',d):'<div class="empty"><div class="big">🎀</div>Chưa có việc nào xong ở đây.</div>');
+  }
+  var open=db.tasks.filter(function(t){return inGroup(t)&&statMatch(t,state.stat);}).sort(sortTasks);
+  if(!open.length) return filterBar()+'<div class="empty"><div class="big">🌷</div>'+(state.stat==='open'&&state.group==='Tất cả'?'Chưa có việc nào.<br>Bấm nút + để thêm nha!':'Không có việc nào khớp bộ lọc ✨')+'</div>';
   var over=[],tod=[],soon=[],later=[],nodue=[];
   open.forEach(function(t){
     if(!t.due) return nodue.push(t);
     var n=diffDays(t.due);
     if(n<0)over.push(t);else if(n===0)tod.push(t);else if(n<=7)soon.push(t);else later.push(t);
   });
-  return section('⏰ Quá hạn',over,'overdue')+section('☀️ Hôm nay',tod)+section('🗓️ 7 ngày tới',soon)+section('🌙 Sau này',later)+section('📌 Không có hạn',nodue);
+  return filterBar()+section('⏰ Quá hạn',over,'overdue')+section('☀️ Hôm nay',tod)+section('🗓️ 7 ngày tới',soon)+section('🌙 Sau này',later)+section('📌 Không có hạn',nodue);
 }
 function renderMatrix(){
-  var open=filtered(false).sort(sortTasks);
+  var k=state.stat==='done'?'open':state.stat;
+  var open=db.tasks.filter(function(t){return inGroup(t)&&statMatch(t,k);}).sort(sortTasks);
   var by={q1:[],q2:[],q3:[],q4:[]};
   open.forEach(function(t){by[quad(t)].push(t);});
   var h='<div class="matrix">';
@@ -296,11 +324,11 @@ function renderSettings(){
     '<div class="set-card"><h3>🔔 Về nhắc nhở</h3><p>Mở một việc có hạn chót rồi bấm <b>"Thêm nhắc vào Lịch"</b>, iPhone sẽ hỏi thêm vào app Lịch. Lịch sẽ hiện thông báo đúng giờ, việc lặp lại cũng được lặp trong Lịch.</p></div>';
 }
 function renderStats(){
-  var open=db.tasks.filter(function(t){return !t.done;});
-  var tod=open.filter(function(t){return t.due&&diffDays(t.due)<=0;}).length;
-  var q1=open.filter(function(t){return quad(t)==='q1';}).length;
-  var doneToday=db.tasks.filter(function(t){return t.done&&t.doneAt&&ymd(new Date(t.doneAt))===today();}).length;
-  $('stats').innerHTML='<div class="stat"><b>'+open.length+'</b>đang chờ</div><div class="stat"><b>'+tod+'</b>tới hạn</div><div class="stat"><b>'+q1+'</b>🔥 làm ngay</div><div class="stat"><b>'+doneToday+'</b>đã xong</div>';
+  var g=db.tasks.filter(inGroup);
+  var c={}; ['open','due','q1','done'].forEach(function(k){c[k]=g.filter(function(t){return statMatch(t,k);}).length;});
+  var lab={open:'đang chờ',due:'tới hạn',q1:'🔥 làm ngay',done:'đã xong'};
+  $('stats').innerHTML=['open','due','q1','done'].map(function(k){
+    return '<button class="stat'+(state.stat===k&&state.tab!=='settings'?' on':'')+'" data-stat="'+k+'"><b>'+c[k]+'</b>'+lab[k]+'</button>';}).join('');
 }
 function renderChips(){
   var all=['Tất cả'].concat(db.groups);
@@ -327,6 +355,10 @@ function toggleDone(id){
     db.tasks.push(copy);
     var base=t.due||today(), nx=nextDue(base,t.repeat);
     while(nx<=today()) nx=nextDue(nx,t.repeat);
+    if(t.until&&nx>t.until){
+      db.tasks=db.tasks.filter(function(x){return x.id!==t.id;});
+      save(); render(); toast('Xong lần cuối rồi! Hết lặp 🎉'); return;
+    }
     t.due=nx;
     save(); render(); toast('Xong rồi! Lần tới: '+fmtDue(t));
   }else{
@@ -340,7 +372,7 @@ function openSheet(task){
   state.form=task?JSON.parse(JSON.stringify(task)):{title:'',important:false,urgent:false,group:(state.group!=='Tất cả'?state.group:''),due:'',time:'',repeat:'none',note:''};
   var f=state.form;
   $('sheetTitle').textContent=task?'Sửa việc':'Thêm việc mới';
-  $('fTitle').value=f.title; $('fDue').value=f.due||''; $('fTime').value=f.time||''; $('fNote').value=f.note||'';
+  $('fTitle').value=f.title; $('fDue').value=f.due||''; $('fUntil').value=f.until||''; $('fTime').value=f.time||''; $('fNote').value=f.note||'';
   $('editBtns').classList.toggle('hidden',!task);
   drawForm();
   $('overlay').classList.add('show'); $('sheet').classList.add('show');
@@ -358,13 +390,18 @@ function drawForm(){
   p.innerHTML=QUAD[q].emo+' Việc này thuộc ô: <b>'+QUAD[q].name+'</b>'+(auto?' (tự tính gấp vì hạn chót sát)':'');
   $('fGroups').innerHTML=['']
     .concat(db.groups).map(function(g){return '<button class="pill'+((f.group||'')===g?' on':'')+'" data-fgroup="'+esc(g)+'">'+(g?esc(g):'Không nhóm')+'</button>';}).join('');
+  var rep=f.repeat&&f.repeat!=='none';
+  $('untilBox').classList.toggle('hidden',!rep);
+  $('dueLabel').textContent=rep?'Lần tới (ngày làm)':'Hạn chót';
   $('fRepeat').innerHTML=REPEATS.map(function(r){return '<button class="pill'+(f.repeat===r[0]?' on':'')+'" data-frep="'+r[0]+'">'+r[1]+'</button>';}).join('');
 }
 function saveForm(){
   var f=state.form;
   f.title=$('fTitle').value.trim(); f.due=$('fDue').value; f.time=$('fTime').value; f.note=$('fNote').value.trim();
+  f.until=(f.repeat!=='none')?$('fUntil').value:'';
   if(!f.title){ toast('Nhập tên việc đã nha'); $('fTitle').focus(); return; }
   if(f.repeat!=='none'&&!f.due) f.due=today();
+  if(f.until&&f.due&&f.until<f.due){ toast('Ngày kết thúc lặp phải sau ngày bắt đầu'); return; }
   if(state.editing){
     var i=db.tasks.findIndex(function(t){return t.id===state.editing;});
     if(i>-1) db.tasks[i]=f;
@@ -387,7 +424,8 @@ function addToCalendar(){
   var lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//todo-pastel//VI','CALSCALE:GREGORIAN','BEGIN:VEVENT',
     'UID:'+(f.id||uid())+'@todo-pastel','DTSTAMP:'+stamp,'DTSTART:'+dt,'DURATION:PT15M',
     'SUMMARY:'+icsEsc('✿ '+f.title),'DESCRIPTION:'+icsEsc(f.note||'Nhắc từ app Việc cần làm')];
-  if(rr) lines.push('RRULE:FREQ='+rr);
+  var un=(f.repeat!=='none')?$('fUntil').value:'';
+  if(rr) lines.push('RRULE:FREQ='+rr+(un?';UNTIL='+un.replace(/-/g,'')+'T235959':''));
   lines.push('BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+icsEsc(f.title),'TRIGGER:PT0M','END:VALARM','END:VEVENT','END:VCALENDAR');
   var blob=new Blob([lines.join('\r\n')],{type:'text/calendar;charset=utf-8'});
   var url=URL.createObjectURL(blob);
@@ -420,6 +458,8 @@ document.addEventListener('click',function(e){
   var el=e.target;
   var c=el.closest('[data-check]'); if(c){ e.stopPropagation(); toggleDone(c.dataset.check); return; }
   var tab=el.closest('nav button'); if(tab){ state.tab=tab.dataset.tab; render(); window.scrollTo(0,0); return; }
+  var st=el.closest('[data-stat]'); if(st){ var k=st.dataset.stat; state.stat=(state.stat===k&&k!=='open')?'open':k; if(state.tab!=='matrix') state.tab='list'; if(k==='done'&&state.tab==='matrix') state.tab='list'; render(); return; }
+  if(el.id==='bClearFilter'){ state.stat='open'; state.group='Tất cả'; render(); return; }
   var chip=el.closest('[data-group]'); if(chip){ state.group=chip.dataset.group; render(); return; }
   var fg=el.closest('[data-fgroup]'); if(fg){ state.form.group=fg.dataset.fgroup; drawForm(); return; }
   var fr=el.closest('[data-frep]'); if(fr){ state.form.repeat=fr.dataset.frep; drawForm(); return; }
